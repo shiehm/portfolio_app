@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "portfolio-app"
+version = "0.1.0"
+package-mode = false
+description = "An app to track your total portfolio across platforms."
+authors = ["Melvin Shieh <shieh.melvin@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13.0"
+flask = "^3.0.0"
+gunicorn = "^21.2.0"
+psycopg2-binary = "^2.9.11"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,39 @@
+<form action="{{ url_for('create_asset') }}" method="post">
+<dl>
+    <dt>
+        <label for="asset_ticker">Enter the ticker of the asset:</label>
+    </dt>
+    <dd>
+        <input id="asset_ticker" type="text" name="asset_ticker" placeholder="New Asset">
+    </dd>
+    <dt>
+        <label for="asset_name">Enter the name of the asset:</label>
+    </dt>
+    <dd>
+        <input id="asset_name" type="text" name="asset_name" placeholder="New Asset">
+    </dd>
+    <dt>
+        <label for="asset_category">Select the category of asset:</label>
+    </dt>
+    <dd>
+        <select id="asset_category" name="asset_category">
+            <option>Stocks</option>
+            <option>Bonds</option>
+            <option>Crypto</option>
+            <option>Mutual Funds</option>
+            <option>Private Investment</option>
+            <option>Other</option>
+        </select>
+    </dd>
+    <dt>
+        <label for="asset_price">Enter the price of the asset:</label>
+    </dt>
+    <dd>
+        <input id="asset_price" type="number" name="asset_price" placeholder="Current Price">
+    </dd>
+</dl>
+<fieldset>
+    <input type="submit" value="Save">
+    <a href="{{ url_for('get_accounts') }}">Cancel</a>
+</fieldset>
+</form>

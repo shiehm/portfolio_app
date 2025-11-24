@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <title>Portfolio App</title>
+    <meta charset="UTF-8">
+  </head>
+</html>
+<body>
+    <header>
+        <h1>Portfolio Overview</h1>
+    </header>
+    <table class="holdings">
+        <thead>
+            <tr>
+                {% for key in lists[0].keys() %}
+                    <th>{{ key }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for lst in lists %}
+            <tr>
+                {% for key, value in lst.items() %}
+                    <td>{{ value }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a class="add" href="{{ url_for('add_account') }}">Add Account</a>
+    <a class="add" href="{{ url_for('add_asset') }}">Add Asset</a>
+</body>

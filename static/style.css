@@ -1,0 +1,30 @@
+/* Lines/borders */
+.holdings {
+  border-collapse: collapse;          /* make single lines between cells */
+  width: 100%;                        /* optional: stretch full width */
+}
+.holdings th, .holdings td {
+  border: 1px solid #ccc;             /* lines around each cell */
+  padding: 8px;                       /* space inside cells */
+}
+
+/* Column widths */
+.holdings th:nth-child(1),
+.holdings td:nth-child(1) { width: 40%; }
+
+.holdings th:nth-child(2),
+.holdings td:nth-child(2) { width: 40%; }
+
+.holdings th:nth-child(3),
+.holdings td:nth-child(3) { width: 20%; }
+
+/* Optional: fixed layout to respect widths even with long content */
+.holdings { table-layout: fixed; }
+.holdings td, .holdings th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Optional: only horizontal lines */
+.holdings th, .holdings td { border-left: 0; border-right: 0; }
+.holdings tr + tr td { border-top: 1px solid #ddd; }
+
+/* Optional: zebra stripes */
+.holdings tbody tr:nth-child(odd) { background: #fafafa; }

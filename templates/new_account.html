@@ -1,0 +1,26 @@
+<form action="{{ url_for('create_account') }}" method="post">
+<dl>
+    <dt>
+        <label for="account_name">Enter the name for your new account:</label>
+    </dt>
+    <dd>
+        <input id="account_name" type="text" name="account_name" placeholder="New Account" value="{{ name }}">
+    </dd>
+    <dt>
+        <label for="account_type">Select the type of account:</label>
+    </dt>
+    <dd>
+        <select id="account_type" name="account_type">
+            <option>Brokerage</option>
+            <option>ROTH IRA</option>
+            <option>IRRA</option>
+            <option>401K</option>
+            <option>Crypto</option>
+            <option>Other</option>
+    </dd>
+</dl>
+<fieldset>
+    <input type="submit" value="Save">
+    <a href="{{ url_for('get_accounts') }}">Cancel</a>
+</fieldset>
+</form>
