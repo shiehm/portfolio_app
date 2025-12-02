@@ -34,18 +34,20 @@ def get_holdings():
 
 @app.route('/accounts')
 def get_accounts():
-    lists = g.storage.all_accounts()
-    return render_template('layout.html', lists=lists)
+    pass
+    # lists = g.storage.all_accounts()
+    # return render_template('accounts.html', lists=lists)
 
 @app.route('/assets')
 def get_assets():
-    lists = g.storage.all_assets()
-    return render_template('layout.html', lists=lists)
+    pass
+    # lists = g.storage.all_assets()
+    # return render_template('assets.html', lists=lists)
 
 @app.route('/holdings/<int:account_id>')
 def show_holdings_for_account(account_id):
     lists = g.storage.account_holdings(account_id)
-    return render_template('layout.html', lists=lists)
+    return render_template('holdings.html', lists=lists)
 
 @app.route('/accounts/new')
 def add_account():
