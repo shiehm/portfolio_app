@@ -1,3 +1,4 @@
+import json
 import os
 import secrets
 from portfolio.database_persistence import DatabasePersistence
@@ -15,6 +16,7 @@ from flask import (
 from werkzeug.exceptions import NotFound
 
 app = Flask(__name__)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = secrets.token_hex(32)
 
 @app.before_request
@@ -23,12 +25,12 @@ def load_data():
 
 @app.route('/')
 def index():
-    return redirect(url_for('get_holdings'))
+    return render_template('layout.html')
 
 @app.route('/holdings')
 def get_holdings():
     lists = g.storage.all_holdings()
-    return render_template('layout.html', lists=lists)
+    return render_template('holdings.html', lists=lists)
 
 @app.route('/accounts')
 def get_accounts():
@@ -60,18 +62,48 @@ def create_account():
 
 @app.route('/assets/new')
 def add_asset():
-    return render_template('new_asset.html')
+    accounts = g.storage.all_accounts()
+    return render_template('new_asset.html', accounts = accounts)
 
 @app.route('/assets', methods=['POST'])
 def create_asset():
+    print("FORM DATA:", request.form.to_dict(flat=False))
     asset_ticker = request.form['asset_ticker']
     asset_name = request.form['asset_name'].strip()
     asset_category = request.form['asset_category']
-    asset_price = request.form['asset_price']
+    current_price = request.form.get('current_price', 0)
 
-    g.storage.add_asset(asset_ticker, asset_name, asset_category, asset_price)
+    g.storage.add_asset(asset_ticker, asset_name, asset_category, current_price)
     flash("The asset has been added.", "success")
     return redirect(url_for('get_assets'))
+
+@app.route('/holdings/new')
+def add_holding():
+    accounts = g.storage.all_accounts()
+    assets = g.storage.all_assets()
+    return render_template('new_holding.html', accounts=accounts, assets=assets)
+
+@app.route('/holdings', methods=['POST'])
+def create_holding():
+    account_id = json.loads(request.form['account_id'])
+    asset_id = json.loads(request.form['asset_id'])
+    shares = request.form['shares']
+    
+    g.storage.add_holding(account_id, asset_id, shares)
+    flash("The holding has been added.", "success")
+    return redirect(url_for('get_holdings'))
+
+@app.route("/holdings/delete", methods=["POST"])
+def delete_holding():
+    asset_id = request.form.get('asset_id', 0)
+    account_id = request.form.get('account_id', 0)
+    g.storage.delete_holding(asset_id, account_id)
+    flash("The holding has been deleted.", "success")
+    return redirect(url_for('get_holdings'))
+
+@app.route("/holdings/update")
+def update_holding(asset_id, account_id):
+    return redirect(url_for('get_holdings'))
 
 if __name__ == "__main__":
     if os.environ.get('FLASK_ENV') == 'production':

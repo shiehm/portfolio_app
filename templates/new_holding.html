@@ -1,0 +1,30 @@
+<form action="{{ url_for('create_holding') }}" method="post">
+<dl>
+    <dt><label for="account_id">Select the account:</label></dt>
+    <dd>
+        <select id="account_id" name="account_id">
+            {% for account in accounts%}
+            <option value="{{ account.id }}">{{ account.account_name }} {{ account.account_type }}</option>
+            {% endfor %}
+        </select>
+    </dd>
+    <dt><label for="asset_id">Select the asset:</label></dt>
+    <dd>
+        <select id="asset_id" name="asset_id">
+            {% for asset in assets%}
+            <option value="{{ asset.id }}">{{ asset.ticker }} {{ asset.name }} {{ asset.category }}</option>
+            {% endfor %}
+        </select>
+    </dd>
+    <dt>
+        <label for="shares">Enter the number of shares:</label>
+    </dt>
+    <dd>
+        <input id="shares" type="number" name="shares" placeholder=0>
+    </dd>
+</dl> 
+<fieldset>
+    <input type="submit" value="Save">
+    <a href="{{ url_for('get_holdings') }}">Cancel</a>
+</fieldset>
+</form>

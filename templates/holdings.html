@@ -1,0 +1,43 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+    <header>
+        <h1>Portfolio Overview: All Holdings</h1>
+    </header>
+    <table class="holdings">
+        <thead>
+            <tr>
+                {% for key in lists[0].keys() if key not in ('asset_id', 'account_id') %}
+                    <th>{{ key }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for lst in lists %}
+            <tr>
+                {% for key, value in lst.items() if key not in ('asset_id', 'account_id') %}
+                    <td>{{ value }}</td>
+                {% endfor %}
+                <td>
+                    <form method="post" action="{{ url_for('update_holding', asset_id=lst.asset_id, account_id=lst.account_id) }}">
+                        <button type="submit" class="update">Update</button>
+                    </form>
+                </td>
+                <td>
+                    <form method="post" action="{{ url_for('delete_holding') }}">
+                        <input type="hidden" name="asset_id" value="{{ lst.asset_id }}">
+                        <input type="hidden" name="account_id" value="{{ lst.account_id }}">
+                        <button type="submit" class="delete">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+{% block links %}
+    <a class="add" href="{{ url_for('add_account') }}">Add Account</a>
+    <a class="add" href="{{ url_for('add_asset') }}">Add Asset</a>
+    <a class="add" href="{{ url_for('add_holding') }}">Add Holding</a>
+{% endblock %}
