@@ -1,3 +1,7 @@
+DROP TABLE IF EXISTS holdings;
+DROP TABLE IF EXISTS assets;
+DROP TABLE IF EXISTS accounts;
+
 CREATE TABLE accounts (
     id serial PRIMARY KEY,
     account_name text NOT NULL,

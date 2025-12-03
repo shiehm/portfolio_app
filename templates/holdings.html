@@ -14,9 +14,9 @@
             </tr>
         </thead>
         <tbody>
-            {% for lst in lists %}
+            {% for dic in lists %}
             <tr>
-                {% for key, value in lst.items() if key not in ('asset_id', 'account_id') %}
+                {% for key, value in dic.items() if key not in ('asset_id', 'account_id', 'holding_id') %}
                     {% if key in ('current_price', 'market_value') %}
                         <td class="currency">${{ "{:,.2f}".format(value | float) }}</td>
                     {% elif key == 'shares' %}
@@ -26,14 +26,14 @@
                     {% endif %} 
                 {% endfor %}
                 <td>
-                    <form method="post" action="{{ url_for('update_holding', asset_id=lst.asset_id, account_id=lst.account_id) }}">
+                    <form action="{{ url_for('update_holding') }}">
+                        <input type="hidden" name="holding_id" value="{{ dic['holding_id'] }}">
                         <button type="submit" class="update">Update</button>
                     </form>
                 </td>
                 <td>
                     <form method="post" action="{{ url_for('delete_holding') }}">
-                        <input type="hidden" name="asset_id" value="{{ lst.asset_id }}">
-                        <input type="hidden" name="account_id" value="{{ lst.account_id }}">
+                        <input type="hidden" name="holding_id" value="{{ dic['holding_id'] }}">
                         <button type="submit" class="delete">Delete</button>
                     </form>
                 </td>

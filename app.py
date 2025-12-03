@@ -30,6 +30,11 @@ def index():
 @app.route('/holdings')
 def get_holdings():
     lists = g.storage.all_holdings()
+
+    print()
+    print(lists)
+    print()
+
     return render_template('holdings.html', lists=lists)
 
 @app.route('/accounts')
@@ -60,7 +65,7 @@ def create_account():
 
     g.storage.add_account(account_name, account_type)
     flash("The account has been added.", "success")
-    return redirect(url_for('get_accounts'))
+    return redirect(url_for('get_holdings'))
 
 @app.route('/assets/new')
 def add_asset():
@@ -77,7 +82,7 @@ def create_asset():
 
     g.storage.add_asset(asset_ticker, asset_name, asset_category, current_price)
     flash("The asset has been added.", "success")
-    return redirect(url_for('get_assets'))
+    return redirect(url_for('get_holdings'))
 
 @app.route('/holdings/new')
 def add_holding():
@@ -97,18 +102,32 @@ def create_holding():
 
 @app.route("/holdings/delete", methods=["POST"])
 def delete_holding():
-    asset_id = request.form.get('asset_id', 0)
-    account_id = request.form.get('account_id', 0)
-    g.storage.delete_holding(asset_id, account_id)
+    holding_id = request.form.get('holding_id', 0)
+    g.storage.delete_holding(holding_id)
     flash("The holding has been deleted.", "success")
     return redirect(url_for('get_holdings'))
 
-@app.route("/holdings/update")
-def update_holding(asset_id, account_id):
-    return redirect(url_for('get_holdings'))
+@app.route("/holdings/update", methods=["GET", "POST"])
+def update_holding():
+    if request.method == "POST":
+        holding_id = request.form.get('holding_id', type=int)
+        shares = request.form.get('shares', type=int)
+        g.storage.update_holding(holding_id, shares)
+        flash("The holding has been updated.", "success")
+        return redirect(url_for('get_holdings'))
+    else:
+        holding_id = request.args.get('holding_id', type=int)
+
+        print("ARGS RAW:", request.args)              # see raw strings
+        print("holding_id raw:", request.args.get("holding_id"))
+
+
+        holding = g.storage.find_holding(holding_id)
+        return render_template('update_holding.html', holding=holding)
 
 if __name__ == "__main__":
     if os.environ.get('FLASK_ENV') == 'production':
         app.run(debug=False)
+
     else:
         app.run(debug=True, port=5003)

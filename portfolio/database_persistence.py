@@ -51,6 +51,7 @@ class DatabasePersistence:
                 if cursor.fetchone()[0] == 0:
                     cursor.execute('''
                         CREATE TABLE holdings (
+                            id serial PRIMARY KEY,
                             asset_id integer NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
                             account_id integer NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
                             shares integer NOT NULL DEFAULT 0
@@ -82,7 +83,8 @@ class DatabasePersistence:
                 holdings.shares,
                 (assets.current_price * holdings.shares) AS market_value,
                 assets.id AS asset_id,
-                accounts.id AS account_id
+                accounts.id AS account_id,
+                holdings.id AS holding_id
             FROM accounts 
             JOIN holdings on accounts.id = holdings.account_id
             JOIN assets ON assets.id = holdings.asset_id
@@ -117,6 +119,33 @@ class DatabasePersistence:
             
         assets = [dict(lst) for lst in results]
         return assets
+    
+    def find_holding(self, holding_id):
+        query = '''
+            SELECT
+                accounts.account_name,
+                accounts.account_type,
+                assets.ticker,
+                assets.name,
+                assets.category,
+                assets.current_price,
+                holdings.shares,
+                (assets.current_price * holdings.shares) AS market_value,
+                assets.id AS asset_id,
+                accounts.id AS account_id,
+                holdings.id AS holding_id
+            FROM accounts 
+            JOIN holdings on accounts.id = holdings.account_id
+            JOIN assets ON assets.id = holdings.asset_id
+            WHERE holdings.id = %s
+        '''
+        logger.info('Executing query: %s with holding_id: %s', query, holding_id)
+        with self._database_connect() as connection:
+            with connection.cursor(cursor_factory=DictCursor) as cursor:
+                cursor.execute(query, (holding_id,))
+                result = cursor.fetchone()
+
+        return result
 
     def add_account(self, account_name, account_type):
         query = '''
@@ -185,19 +214,19 @@ class DatabasePersistence:
         account_holdings = [dict(lst) for lst in results]
         return account_holdings
     
-    def delete_holding(self, asset_id, account_id):
-        query = 'DELETE FROM holdings WHERE asset_id = %s AND account_id = %s'
-        logger.info('Executing query: %s with asset_id: %s and account_id: %s', query, asset_id, account_id)
+    def delete_holding(self, holding_id):
+        query = 'DELETE FROM holdings WHERE id = %s'
+        logger.info('Executing query: %s with id: %s', query, holding_id)
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute(query, (asset_id, account_id))
+                cursor.execute(query, (holding_id,))
     
-    def update_holding(self, asset_id, account_id, shares):
-        query = 'UPDATE holdings SET shares = %s WHERE asset_id = %s and account_id = %s'
-        logger.info('Executing query: %s with shares = %s, asset_id: %s, account_id: %s', query, shares, asset_id, account_id)
+    def update_holding(self, holding_id, shares):
+        query = 'UPDATE holdings SET shares = %s WHERE id = %s'
+        logger.info('Executing query: %s with shares = %s, id: %s', query, shares, holding_id)
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute(query, (shares, asset_id, account_id))
+                cursor.execute(query, (shares, holding_id))
 
     def delete_asset(self, asset_id):
         query = 'DELETE FROM assets WHERE asset_id = %s'
