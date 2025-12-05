@@ -8,6 +8,10 @@
 }
 .btn:hover { background: #2563eb; }
 
+.row-btn {
+  text-align: center;
+}
+
 .table-wrap {
   overflow-x: auto;
   max-width: 100%;  /* Ensures it stays within its parent */
