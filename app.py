@@ -29,13 +29,21 @@ def index():
 
 @app.route('/holdings')
 def get_holdings():
-    lists = g.storage.all_holdings()
+    accounts = g.storage.all_accounts()
+    account_id = request.args.get('account_id', type=int)
+    
+    print("RAW:", request.args.get("account_id"))
+    print("CAST:", request.args.get("account_id", type=int))
 
-    print()
-    print(lists)
-    print()
-
-    return render_template('holdings.html', lists=lists)
+    if account_id is None:
+        lists = g.storage.all_holdings()
+    else:
+        lists = g.storage.account_holdings(account_id)
+    
+    return render_template('holdings.html', 
+                            accounts=accounts, 
+                            account_id=account_id,
+                            lists=lists)
 
 @app.route('/accounts')
 def get_accounts():

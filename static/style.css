@@ -27,9 +27,8 @@
   overflow: hidden;
 }
 
-.holdings td:nth-last-child(3),
-.holdings td:nth-last-child(4),
-.holdings td:nth-last-child(5) {
+.currency,
+.number {
   text-align: right;
 }
 
