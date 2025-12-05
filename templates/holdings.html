@@ -24,8 +24,8 @@
     <table class="holdings">
         <thead>
             <tr>
-                {% for key in lists[0].keys() if key not in ('asset_id', 'account_id', 'holding_id') %}
-                    <th>{{ key | replace('_', ' ') | title }}</th>
+                {% for column in columns if column not in ('asset_id', 'account_id', 'holding_id') %}
+                    <th>{{ column | replace('_', ' ') | title }}</th>
                 {% endfor %}
             </tr>
         </thead>
@@ -48,15 +48,27 @@
                     </form>
                 </td>
                 <td>
-                    <form method="post" action="{{ url_for('delete_holding') }}">
-                        <input type="hidden" name="holding_id" value="{{ dic['holding_id'] }}">
-                        <button type="submit" class="delete">Delete</button>
-                    </form>
+                    {% if dic['holding_id'] %}
+                        <form method="post" action="{{ url_for('delete_holding') }}">
+                            <input type="hidden" name="holding_id" value="{{ dic['holding_id'] }}">
+                            <button type="submit" class="delete">Delete</button>
+                        </form>
+                    {% elif dic['asset_id'] %}
+                        <form method="post" action="{{ url_for('delete_asset') }}">
+                            <input type="hidden" name="asset_id" value="{{ dic['asset_id'] }}">
+                            <button type="submit" class="delete">Delete</button>
+                        </form>
+                    {% elif dic['account_id'] %}
+                        <form method="post" action="{{ url_for('delete_account') }}">
+                            <input type="hidden" name="account_id" value="{{ dic['account_id'] }}">
+                            <button type="submit" class="delete">Delete</button>
+                        </form>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
         </tbody>
-        {% set total_market_value = lists | sum(attribute='market_value', start=0) %}
+        {% set total_market_value = lists | map(attribute='market_value') | map('default', 0, true) | sum(start=0) %}
         <tfoot>
             <tr>
                 <td colspan="7"><strong>Total Market Value:</strong></td>

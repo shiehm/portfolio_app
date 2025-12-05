@@ -12,6 +12,23 @@ logger = logging.getLogger(__name__)
 class DatabasePersistence:
     def __init__(self):
         self._setup_schema()
+        self._BASE_HOLDINGS_QUERY = """
+            SELECT
+                accounts.account_name,
+                accounts.account_type,
+                assets.ticker,
+                assets.name,
+                assets.category,
+                assets.current_price,
+                holdings.shares,
+                (assets.current_price * holdings.shares) AS market_value,
+                assets.id AS asset_id,
+                accounts.id AS account_id,
+                holdings.id AS holding_id
+            FROM accounts
+            LEFT JOIN holdings ON accounts.id = holdings.account_id
+            LEFT JOIN assets ON assets.id = holdings.asset_id
+        """
     
     def _setup_schema(self):
         with self._database_connect() as connection:
@@ -71,24 +88,22 @@ class DatabasePersistence:
         finally:
             connection.close()
 
+    def get_columns(self):
+        filter_clause = "LIMIT 0"
+        query = self._BASE_HOLDINGS_QUERY + filter_clause
+        logger.info('Executing query: %s', query)
+        with self._database_connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+                if cursor.description is None:
+                    return []     
+                # cursor.description is a list of tuples (name, type_code, ...)
+                column_names = [column[0] for column in cursor.description]
+        
+        return column_names
+
     def all_holdings(self):
-        query = '''
-            SELECT
-                accounts.account_name,
-                accounts.account_type,
-                assets.ticker,
-                assets.name,
-                assets.category,
-                assets.current_price,
-                holdings.shares,
-                (assets.current_price * holdings.shares) AS market_value,
-                assets.id AS asset_id,
-                accounts.id AS account_id,
-                holdings.id AS holding_id
-            FROM accounts 
-            JOIN holdings on accounts.id = holdings.account_id
-            JOIN assets ON assets.id = holdings.asset_id
-        '''
+        query = self._BASE_HOLDINGS_QUERY
         logger.info('Executing query: %s', query)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
@@ -229,22 +244,22 @@ class DatabasePersistence:
                 cursor.execute(query, (shares, holding_id))
 
     def delete_asset(self, asset_id):
-        query = 'DELETE FROM assets WHERE asset_id = %s'
-        logger.info('Executing query: %s with asset_id = %s', query, asset_id)
+        query = 'DELETE FROM assets WHERE id = %s'
+        logger.info('Executing query: %s with id = %s', query, asset_id)
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(query, (asset_id,))
     
     def update_asset(self, asset_id, current_price):
-        query = 'UPDATE assets SET current_price = %s WHERE asset_id = %s'
-        logger.info('Executing query: %s with current_price = %s and asset_id = %s', query, current_price, asset_id)
+        query = 'UPDATE assets SET current_price = %s WHERE id = %s'
+        logger.info('Executing query: %s with current_price = %s and id = %s', query, current_price, asset_id)
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(query, (current_price, asset_id))
     
     def delete_account(self, account_id):
-        query = 'DELETE FROM accounts WHERE account_id = %s'
-        logger.info('Executing query: %s with account_id = %s')
+        query = 'DELETE FROM accounts WHERE id = %s'
+        logger.info('Executing query: %s with id = %s')
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute(query, (asset_id,))
+                cursor.execute(query, (account_id,))
