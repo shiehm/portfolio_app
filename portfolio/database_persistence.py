@@ -89,7 +89,7 @@ class DatabasePersistence:
             connection.close()
 
     def get_columns(self):
-        filter_clause = "LIMIT 0"
+        filter_clause = 'LIMIT 0'
         query = self._BASE_HOLDINGS_QUERY + filter_clause
         logger.info('Executing query: %s', query)
         with self._database_connect() as connection:
@@ -136,24 +136,8 @@ class DatabasePersistence:
         return assets
     
     def find_holding(self, holding_id):
-        query = '''
-            SELECT
-                accounts.account_name,
-                accounts.account_type,
-                assets.ticker,
-                assets.name,
-                assets.category,
-                assets.current_price,
-                holdings.shares,
-                (assets.current_price * holdings.shares) AS market_value,
-                assets.id AS asset_id,
-                accounts.id AS account_id,
-                holdings.id AS holding_id
-            FROM accounts 
-            JOIN holdings on accounts.id = holdings.account_id
-            JOIN assets ON assets.id = holdings.asset_id
-            WHERE holdings.id = %s
-        '''
+        filter_clause = 'WHERE holdings.id = %s'
+        query = self._BASE_HOLDINGS_QUERY + filter_clause
         logger.info('Executing query: %s with holding_id: %s', query, holding_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:

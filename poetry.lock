@@ -304,17 +304,6 @@ files = [
 ]
 
 [[package]]
-name = "uuid"
-version = "1.30"
-description = "UUID object and generation functions (Python 2.3 or higher)"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "uuid-1.30.tar.gz", hash = "sha256:1f87cc004ac5120466f36c5beae48b4c48cc411968eed0eaecd3da82aa96193f"},
-]
-
-[[package]]
 name = "werkzeug"
 version = "3.1.3"
 description = "The comprehensive WSGI web application library."
@@ -335,4 +324,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13.0"
-content-hash = "babf94702e6a62308da3c045efe0ef23f67cec8fb4272d16dd61e2e261fcc379"
+content-hash = "620be7b32ba479096aa0725f519d6cd8cfb86e44b5c796426c96192a8800a4c6"

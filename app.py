@@ -122,17 +122,18 @@ def delete_holding():
 def update_holding():
     if request.method == "POST":
         holding_id = request.form.get('holding_id', type=int)
+        asset_id = request.form.get('asset_id', type=int)
+
         shares = request.form.get('shares', type=int)
+        current_price = request.form.get('current_price', type=float)
+
         g.storage.update_holding(holding_id, shares)
+        g.storage.update_asset(asset_id, current_price)
+
         flash("The holding has been updated.", "success")
         return redirect(url_for('get_holdings'))
     else:
         holding_id = request.args.get('holding_id', type=int)
-
-        print("ARGS RAW:", request.args)              # see raw strings
-        print("holding_id raw:", request.args.get("holding_id"))
-
-
         holding = g.storage.find_holding(holding_id)
         return render_template('update_holding.html', holding=holding)
 
