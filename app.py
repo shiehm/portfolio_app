@@ -37,10 +37,6 @@ def get_holdings():
         lists = g.storage.all_holdings()
     else:
         lists = g.storage.account_holdings(account_id)
-        # if holdings:
-        #     lists = holdings
-        # else:
-        #     lists = [{}]
     
     return render_template('holdings.html',
                             columns=columns, 
@@ -50,20 +46,13 @@ def get_holdings():
 
 @app.route('/accounts')
 def get_accounts():
-    pass
-    # lists = g.storage.all_accounts()
-    # return render_template('accounts.html', lists=lists)
+    lists = g.storage.account_totals()
+    return render_template('accounts.html', lists=lists)
 
 @app.route('/assets')
 def get_assets():
-    pass
-    # lists = g.storage.all_assets()
-    # return render_template('assets.html', lists=lists)
-
-# @app.route('/holdings/<int:account_id>')
-# def show_holdings_for_account(account_id):
-#     lists = g.storage.account_holdings(account_id)
-#     return render_template('holdings.html', lists=lists)
+    lists = g.storage.all_assets()
+    return render_template('assets.html', lists=lists)
 
 @app.route('/accounts/new')
 def add_account():
@@ -142,14 +131,14 @@ def delete_asset():
     asset_id = request.form.get('asset_id', 0)
     g.storage.delete_asset(asset_id)
     flash("The asset has been deleted.", "success")
-    return redirect(url_for('get_holdings'))
+    return redirect(url_for('get_assets'))
 
 @app.route("/accounts/delete", methods=["POST"])
 def delete_account():
     account_id = request.form.get('account_id', 0)
     g.storage.delete_account(account_id)
     flash("The account has been deleted.", "success")
-    return redirect(url_for('get_holdings'))
+    return redirect(url_for('get_accounts'))
 
 if __name__ == "__main__":
     if os.environ.get('FLASK_ENV') == 'production':

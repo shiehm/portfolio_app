@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class DatabasePersistence:
     def __init__(self):
         self._setup_schema()
-        self._BASE_HOLDINGS_QUERY = """
+        self._BASE_HOLDINGS_QUERY = '''
             SELECT
                 accounts.account_name,
                 accounts.account_type,
@@ -28,7 +28,7 @@ class DatabasePersistence:
             FROM accounts
             LEFT JOIN holdings ON accounts.id = holdings.account_id
             LEFT JOIN assets ON assets.id = holdings.asset_id
-        """
+        '''
     
     def _setup_schema(self):
         with self._database_connect() as connection:
@@ -222,7 +222,7 @@ class DatabasePersistence:
     
     def update_holding(self, holding_id, shares):
         query = 'UPDATE holdings SET shares = %s WHERE id = %s'
-        logger.info('Executing query: %s with shares = %s, id: %s', query, shares, holding_id)
+        logger.info('Executing query: %s with shares: %s, id: %s', query, shares, holding_id)
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(query, (shares, holding_id))
@@ -247,3 +247,26 @@ class DatabasePersistence:
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(query, (account_id,))
+    
+    def account_totals(self):
+        query = f'''
+            WITH base_query AS ({self._BASE_HOLDINGS_QUERY})
+
+            SELECT 
+                account_name,
+                account_type,
+                account_id,
+                COUNT(ticker) AS number_holdings,
+                SUM(market_value) AS total_market_value
+            FROM base_query
+            GROUP BY account_name, account_type, account_id
+        '''
+        logger.info('Executing query: %s', query)
+        with self._database_connect() as connection:
+            with connection.cursor(cursor_factory=DictCursor) as cursor:
+                cursor.execute(query)
+                results = cursor.fetchall()
+        
+        accounts = [dict(lst) for lst in results]
+        return accounts
+        

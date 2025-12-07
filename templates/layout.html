@@ -7,10 +7,27 @@
   </head>
 </html>
 <body>
+  <header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">
+            <p>{{ message }}</p>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </header>
     {% block content %}
     {% endblock %}
     
+  <hr>
     {% block links %}
-        <a href="{{ url_for('get_holdings') }}">See Holdings</a>
     {% endblock %}
-</body>
+
+  <hr>
+    <a class="btn-view" href="{{ url_for('get_accounts') }}">See Accounts</a>
+    <a class="btn-view" href="{{ url_for('get_assets') }}">See Assets</a>
+    <a class="btn-view" href="{{ url_for('get_holdings') }}">See Holdings</a>
+
+  </body>

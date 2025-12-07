@@ -2,7 +2,15 @@
 
 {% block content %}
 <header>
-    <h1>Portfolio Overview: All Holdings</h1>
+    {% if account_id == None %}
+        <h1>Portfolio Overview: All Holdings</h1>
+    {% else %}
+        {% for account in accounts %}
+            {% if account['id'] == account_id %}
+                <h1>Portfolio Overview: {{ account['account_name'] }} ({{ account['account_type'] }})</h1>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
 </header>
 
 <div class="table-wrap">
@@ -50,24 +58,24 @@
                     {% endif %} 
                 {% endfor %}
                 <td>
-                    <form class="row-btn" action="{{ url_for('update_holding') }}">
+                    <form class="btn-row" action="{{ url_for('update_holding') }}">
                         <input type="hidden" name="holding_id" value="{{ dic['holding_id'] }}">
                         <button type="submit" class="update">Update</button>
                     </form>
                 </td>
                 <td>
                     {% if dic['holding_id'] %}
-                        <form class="row-btn" method="post" action="{{ url_for('delete_holding') }}">
+                        <form class="btn-row" method="post" action="{{ url_for('delete_holding') }}">
                             <input type="hidden" name="holding_id" value="{{ dic['holding_id'] }}">
                             <button type="submit" class="delete">Delete</button>
                         </form>
                     {% elif dic['asset_id'] %}
-                        <form class="row-btn" method="post" action="{{ url_for('delete_asset') }}">
+                        <form class="btn-row" method="post" action="{{ url_for('delete_asset') }}">
                             <input type="hidden" name="asset_id" value="{{ dic['asset_id'] }}">
                             <button type="submit" class="delete">Delete</button>
                         </form>
                     {% elif dic['account_id'] %}
-                        <form class="row-btn" method="post" action="{{ url_for('delete_account') }}">
+                        <form class="btn-row" method="post" action="{{ url_for('delete_account') }}">
                             <input type="hidden" name="account_id" value="{{ dic['account_id'] }}">
                             <button type="submit" class="delete">Delete</button>
                         </form>
@@ -78,7 +86,7 @@
         </tbody>
         {% set total_market_value = lists | map(attribute='market_value') | map('default', 0, true) | sum(start=0) %}
         <tfoot>
-            <tr>
+            <tr class="total-row">
                 <td colspan="7"><strong>Total Market Value:</strong></td>
                 <td class="currency"><strong>${{ "{:,.2f}".format(total_market_value | float) }}</strong></td>
             </tr>
@@ -89,8 +97,8 @@
 
 {% block links %}
 <div class="actions">
-  <a class="btn" href="{{ url_for('add_account') }}">Add Account</a>
-  <a class="btn" href="{{ url_for('add_asset') }}">Add Asset</a>
-  <a class="btn" href="{{ url_for('add_holding') }}">Add Holding</a>
+  <a class="btn-add" href="{{ url_for('add_account') }}">Add Account</a>
+  <a class="btn-add" href="{{ url_for('add_asset') }}">Add Asset</a>
+  <a class="btn-add" href="{{ url_for('add_holding') }}">Add Holding</a>
 </div>
 {% endblock %}

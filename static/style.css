@@ -1,4 +1,4 @@
-.btn {
+.btn-add {
   display: inline-block;
   padding: 0.5rem 0.75rem;
   background: #3b82f6;
@@ -6,9 +6,19 @@
   text-decoration: none;
   border-radius: 4px;
 }
-.btn:hover { background: #2563eb; }
+.btn-add:hover { background: #2563eb; }
 
-.row-btn {
+.btn-view {
+  display: inline-block;
+  padding: 0.5rem 0.75rem;
+  background: #2a5410;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+}
+.btn-add:hover { background: #1e4d08; }
+
+.btn-row {
   text-align: center;
 }
 
@@ -27,6 +37,7 @@
 .holdings td {
   padding: 8px;
   border-top: 1px solid #ddd;   /* horizontal lines only */
+  border-bottom: 1px solid #ddd;   /* horizontal lines only */
   white-space: nowrap;
   overflow: hidden;
 }
@@ -39,3 +50,11 @@
 .holdings tbody tr:nth-child(odd) { 
   background: #fafafa;    /* zebra stripes */
 } 
+
+.total-row td {
+  background: #666666;
+  color: #fff;
+  font-weight: 600;
+  border-top: 3px solid #2a2a2a;
+  border-bottom: 3px solid #2a2a2a;
+}

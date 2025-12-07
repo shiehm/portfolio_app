@@ -1,0 +1,53 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<header>
+    <h1>Portfolio Overview: All Accounts</h1>
+</header>
+
+<div class="table-wrap">
+    <table class="holdings">
+        <thead>
+            <tr>
+                {% for column in lists[0].keys() if column != 'account_id' %}
+                    <th>{{ column | replace('_', ' ') | title }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for dic in lists %}
+                <tr>
+                    {% for key, value in dic.items() if key != 'account_id' %}
+                        {% if key == 'total_market_value' %}
+                            <td class="currency">${{ "{:,.2f}".format(value | float) }}</td>
+                        {% elif key == 'number_holdings' %}
+                            <td class="number">{{ "{:,}".format(value | int) }}</td>
+                        {% else %}
+                            <td>{{ value }}</td>
+                        {% endif %} 
+                    {% endfor %}
+                    <td>
+                        <form class="btn-row" method="post" action="{{ url_for('delete_account') }}">
+                            <input type="hidden" name="account_id" value="{{ dic['account_id'] }}">
+                            <button type="submit" class="delete">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        {% set total_market_value = lists | map(attribute='total_market_value') | map('default', 0, true) | sum(start=0) %}
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="3"><strong>Total Market Value:</strong></td>
+                <td class="currency"><strong>${{ "{:,.2f}".format(total_market_value | float) }}</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}
+
+{% block links %}
+<div class="actions">
+  <a class="btn-add" href="{{ url_for('add_account') }}">Add Account</a>
+</div>
+{% endblock %}
