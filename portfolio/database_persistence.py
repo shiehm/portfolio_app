@@ -189,21 +189,8 @@ class DatabasePersistence:
                 cursor.execute(query, (account_id, asset_id, shares))
 
     def account_holdings(self, account_id):
-        query = '''
-            SELECT
-                accounts.account_name,
-                accounts.account_type,
-                assets.ticker,
-                assets.name,
-                assets.category,
-                assets.current_price,
-                holdings.shares,
-                (assets.current_price * holdings.shares) AS market_value
-            FROM accounts 
-            JOIN holdings on accounts.id = holdings.account_id
-            JOIN assets ON assets.id = holdings.asset_id
-            WHERE accounts.id = %s
-        '''
+        filter_clause = 'WHERE accounts.id = %s'
+        query = self._BASE_HOLDINGS_QUERY + filter_clause
         logger.info('Executing query: %s with account_id: %s', query, account_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
