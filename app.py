@@ -37,6 +37,8 @@ def get_holdings():
         lists = g.storage.all_holdings()
     else:
         lists = g.storage.account_holdings(account_id)
+
+    total_market_value = sum(dic['market_value'] for dic in lists)
     
     return render_template('holdings.html',
                             columns=columns, 

@@ -26,9 +26,20 @@ class DatabasePersistence:
                 accounts.id AS account_id,
                 holdings.id AS holding_id
             FROM accounts
-            LEFT JOIN holdings ON accounts.id = holdings.account_id
-            LEFT JOIN assets ON assets.id = holdings.asset_id
+            {join} JOIN holdings ON accounts.id = holdings.account_id
+            {join} JOIN assets ON assets.id = holdings.asset_id
         '''
+    
+    def _base_holdings_query(self, join='INNER'):
+        join_type = join.upper()
+        if join_type not in ('LEFT', 'INNER', 'RIGHT', 'FULL'):
+            raise ValueError('Invalid join type.')
+        return self._BASE_HOLDINGS_QUERY.format(join=join_type)
+
+    def _get_total_market_value(self, filter):
+        filter_clause = filter
+        query = self._base_holdings_query() + filter_clause
+        
     
     def _setup_schema(self):
         with self._database_connect() as connection:
@@ -90,7 +101,7 @@ class DatabasePersistence:
 
     def get_columns(self):
         filter_clause = 'LIMIT 0'
-        query = self._BASE_HOLDINGS_QUERY + filter_clause
+        query = self._base_holdings_query() + filter_clause
         logger.info('Executing query: %s', query)
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
@@ -103,7 +114,7 @@ class DatabasePersistence:
         return column_names
 
     def all_holdings(self):
-        query = self._BASE_HOLDINGS_QUERY
+        query = self._base_holdings_query()
         logger.info('Executing query: %s', query)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
@@ -137,7 +148,7 @@ class DatabasePersistence:
     
     def find_holding(self, holding_id):
         filter_clause = 'WHERE holdings.id = %s'
-        query = self._BASE_HOLDINGS_QUERY + filter_clause
+        query = self._base_holdings_query() + filter_clause
         logger.info('Executing query: %s with holding_id: %s', query, holding_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
@@ -190,7 +201,7 @@ class DatabasePersistence:
 
     def account_holdings(self, account_id):
         filter_clause = 'WHERE accounts.id = %s'
-        query = self._BASE_HOLDINGS_QUERY + filter_clause
+        query = self._base_holdings_query('LEFT') + filter_clause
         logger.info('Executing query: %s with account_id: %s', query, account_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
@@ -237,7 +248,7 @@ class DatabasePersistence:
     
     def account_totals(self):
         query = f'''
-            WITH base_query AS ({self._BASE_HOLDINGS_QUERY})
+            WITH base_query AS ({self._base_holdings_query('LEFT')})
 
             SELECT 
                 account_name,
