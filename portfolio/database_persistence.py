@@ -12,34 +12,16 @@ logger = logging.getLogger(__name__)
 class DatabasePersistence:
     def __init__(self):
         self._setup_schema()
-        self._BASE_HOLDINGS_QUERY = '''
-            SELECT
-                accounts.account_name,
-                accounts.account_type,
-                assets.ticker,
-                assets.name,
-                assets.category,
-                assets.current_price,
-                holdings.shares,
-                (assets.current_price * holdings.shares) AS market_value,
-                assets.id AS asset_id,
-                accounts.id AS account_id,
-                holdings.id AS holding_id
-            FROM accounts
-            {join} JOIN holdings ON accounts.id = holdings.account_id
-            {join} JOIN assets ON assets.id = holdings.asset_id
-        '''
+        self._BASE_HOLDINGS_QUERY = 'SELECT * FROM views.base_holdings '
     
-    def _base_holdings_query(self, join='INNER'):
-        join_type = join.upper()
-        if join_type not in ('LEFT', 'INNER', 'RIGHT', 'FULL'):
-            raise ValueError('Invalid join type.')
-        return self._BASE_HOLDINGS_QUERY.format(join=join_type)
+    def _base_holdings_query(self, filter=None):
+        # Only shows accounts with holdings 
+        if filter == 'has_holdings':
+            filter_clause = 'WHERE shares IS NOT NULL '
+            return self._BASE_HOLDINGS_QUERY + filter_clause
 
-    def _get_total_market_value(self, filter):
-        filter_clause = filter
-        query = self._base_holdings_query() + filter_clause
-        
+        # Shows all accounts regardless of holdings
+        return self._BASE_HOLDINGS_QUERY
     
     def _setup_schema(self):
         with self._database_connect() as connection:
@@ -114,7 +96,7 @@ class DatabasePersistence:
         return column_names
 
     def all_holdings(self):
-        query = self._base_holdings_query()
+        query = self._base_holdings_query('has_holdings')
         logger.info('Executing query: %s', query)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
@@ -147,12 +129,22 @@ class DatabasePersistence:
         return assets
     
     def find_holding(self, holding_id):
-        filter_clause = 'WHERE holdings.id = %s'
-        query = self._base_holdings_query() + filter_clause
+        filter_clause = 'AND holding_id = %s'
+        query = self._base_holdings_query('has_holdings') + filter_clause
         logger.info('Executing query: %s with holding_id: %s', query, holding_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute(query, (holding_id,))
+                result = cursor.fetchone()
+
+        return result
+
+    def find_asset(self, asset_id):
+        query = 'SELECT * FROM assets WHERE id = %s'
+        logger.info('Executing query: %s with id: %s', query, asset_id)
+        with self._database_connect() as connection:
+            with connection.cursor(cursor_factory=DictCursor) as cursor:
+                cursor.execute(query, (asset_id,))
                 result = cursor.fetchone()
 
         return result
@@ -200,8 +192,8 @@ class DatabasePersistence:
                 cursor.execute(query, (account_id, asset_id, shares))
 
     def account_holdings(self, account_id):
-        filter_clause = 'WHERE accounts.id = %s'
-        query = self._base_holdings_query('LEFT') + filter_clause
+        filter_clause = 'WHERE account_id = %s'
+        query = self._base_holdings_query() + filter_clause
         logger.info('Executing query: %s with account_id: %s', query, account_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
@@ -248,14 +240,15 @@ class DatabasePersistence:
     
     def account_totals(self):
         query = f'''
-            WITH base_query AS ({self._base_holdings_query('LEFT')})
+            WITH base_query AS ({self._base_holdings_query()})
 
             SELECT 
                 account_name,
                 account_type,
                 account_id,
                 COUNT(ticker) AS number_holdings,
-                SUM(market_value) AS total_market_value
+                SUM(market_value) AS total_market_value,
+                SUM(percent) AS percent
             FROM base_query
             GROUP BY account_name, account_type, account_id
         '''
@@ -267,4 +260,30 @@ class DatabasePersistence:
         
         accounts = [dict(lst) for lst in results]
         return accounts
+
+    def asset_totals(self):
+        query = f'''
+            WITH base_query AS ({self._base_holdings_query()})
+
+            SELECT 
+                assets.id AS id,
+                assets.ticker,
+                assets.name,
+                assets.category,
+                MIN(assets.current_price) AS current_price,
+                SUM(shares) AS total_shares,
+                COUNT(DISTINCT account_id) AS accounts_holding,
+                SUM(market_value) AS total_market_value,
+                SUM(percent) AS percent
+            FROM assets
+            LEFT JOIN base_query ON assets.id = base_query.asset_id
+            GROUP BY assets.id, assets.ticker, assets.name, assets.category
+        '''
+        logger.info('Executing query: %s', query)
+        with self._database_connect() as connection:
+            with connection.cursor(cursor_factory=DictCursor) as cursor:
+                cursor.execute(query)
+                results = cursor.fetchall()
         
+        assets = [dict(lst) for lst in results]
+        return assets

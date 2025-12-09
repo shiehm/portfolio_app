@@ -27,6 +27,16 @@ def load_data():
 def index():
     return render_template('layout.html')
 
+@app.route('/accounts')
+def get_accounts():
+    lists = g.storage.account_totals()
+    return render_template('accounts.html', lists=lists)
+
+@app.route('/assets')
+def get_assets():
+    lists = g.storage.asset_totals()
+    return render_template('assets.html', lists=lists)
+
 @app.route('/holdings')
 def get_holdings():
     columns = g.storage.get_columns()
@@ -37,24 +47,12 @@ def get_holdings():
         lists = g.storage.all_holdings()
     else:
         lists = g.storage.account_holdings(account_id)
-
-    total_market_value = sum(dic['market_value'] for dic in lists)
     
     return render_template('holdings.html',
                             columns=columns, 
                             accounts=accounts, 
                             account_id=account_id,
                             lists=lists)
-
-@app.route('/accounts')
-def get_accounts():
-    lists = g.storage.account_totals()
-    return render_template('accounts.html', lists=lists)
-
-@app.route('/assets')
-def get_assets():
-    lists = g.storage.all_assets()
-    return render_template('assets.html', lists=lists)
 
 @app.route('/accounts/new')
 def add_account():
@@ -67,7 +65,7 @@ def create_account():
 
     g.storage.add_account(account_name, account_type)
     flash("The account has been added.", "success")
-    return redirect(url_for('get_holdings'))
+    return redirect(url_for('get_accounts'))
 
 @app.route('/assets/new')
 def add_asset():
@@ -84,7 +82,7 @@ def create_asset():
 
     g.storage.add_asset(asset_ticker, asset_name, asset_category, current_price)
     flash("The asset has been added.", "success")
-    return redirect(url_for('get_holdings'))
+    return redirect(url_for('get_assets'))
 
 @app.route('/holdings/new')
 def add_holding():
@@ -102,12 +100,19 @@ def create_holding():
     flash("The holding has been added.", "success")
     return redirect(url_for('get_holdings'))
 
-@app.route("/holdings/delete", methods=["POST"])
-def delete_holding():
-    holding_id = request.form.get('holding_id', 0)
-    g.storage.delete_holding(holding_id)
-    flash("The holding has been deleted.", "success")
-    return redirect(url_for('get_holdings'))
+@app.route("/assets/update", methods=["GET", "POST"])
+def update_asset():
+    if request.method == "POST":
+        asset_id = request.form.get('asset_id', type=int)
+        current_price = request.form.get('current_price', type=float)
+        g.storage.update_asset(asset_id, current_price)
+
+        flash("The asset has been updated.", "success")
+        return redirect(url_for('get_assets'))
+    else:
+        asset_id = request.args.get('asset_id', type=int)
+        asset = g.storage.find_asset(asset_id)
+        return render_template('update_asset.html', asset=asset)
 
 @app.route("/holdings/update", methods=["GET", "POST"])
 def update_holding():
@@ -128,6 +133,13 @@ def update_holding():
         holding = g.storage.find_holding(holding_id)
         return render_template('update_holding.html', holding=holding)
 
+@app.route("/accounts/delete", methods=["POST"])
+def delete_account():
+    account_id = request.form.get('account_id', 0)
+    g.storage.delete_account(account_id)
+    flash("The account has been deleted.", "success")
+    return redirect(url_for('get_accounts'))
+
 @app.route("/assets/delete", methods=["POST"])
 def delete_asset():
     asset_id = request.form.get('asset_id', 0)
@@ -135,12 +147,12 @@ def delete_asset():
     flash("The asset has been deleted.", "success")
     return redirect(url_for('get_assets'))
 
-@app.route("/accounts/delete", methods=["POST"])
-def delete_account():
-    account_id = request.form.get('account_id', 0)
-    g.storage.delete_account(account_id)
-    flash("The account has been deleted.", "success")
-    return redirect(url_for('get_accounts'))
+@app.route("/holdings/delete", methods=["POST"])
+def delete_holding():
+    holding_id = request.form.get('holding_id', 0)
+    g.storage.delete_holding(holding_id)
+    flash("The holding has been deleted.", "success")
+    return redirect(url_for('get_holdings'))
 
 if __name__ == "__main__":
     if os.environ.get('FLASK_ENV') == 'production':

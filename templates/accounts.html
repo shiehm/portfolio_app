@@ -22,6 +22,8 @@
                             <td class="currency">${{ "{:,.2f}".format(value | float) }}</td>
                         {% elif key == 'number_holdings' %}
                             <td class="number">{{ "{:,}".format(value | int) }}</td>
+                        {% elif 'percent' in key %}
+                            <td class="percent">{{ '{:.2%}'.format(value|float) }}</td>
                         {% else %}
                             <td>{{ value }}</td>
                         {% endif %} 
@@ -36,10 +38,12 @@
             {% endfor %}
         </tbody>
         {% set total_market_value = lists | map(attribute='total_market_value') | map('default', 0, true) | sum(start=0) %}
+        {% set total_percent = lists | map(attribute='percent') | map('default', 0, true) | sum(start=0) %}
         <tfoot>
             <tr class="total-row">
-                <td colspan="3"><strong>Total Market Value:</strong></td>
+                <td colspan="3"><strong>Total</strong></td>
                 <td class="currency"><strong>${{ "{:,.2f}".format(total_market_value | float) }}</strong></td>
+                <td class="percent"><strong>{{ "{:.2%}".format(total_percent | float) }}</strong></td>
             </tr>
         </tfoot>
     </table>

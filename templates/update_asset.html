@@ -1,0 +1,20 @@
+<form action="{{ url_for('update_asset') }}" method="post">
+    <dl>
+        <dt>Asset Ticker: {{ asset.ticker }}</dt>
+        <dt>Asset Name: {{ asset.name }}</dt>
+        <p></p>
+
+        <input type="hidden" name="asset_id" value="{{ asset['id'] }}">
+        <dt>
+            <label for="current_price">Enter the current price:</label>
+        </dt>
+        <dd>
+            <input id="current_price" type="currency" name="current_price" placeholder="{{ asset['current_price'] }}">
+        </dd>
+    </dl> 
+
+    <fieldset>
+        <input type="submit" value="Save">
+        <a href="{{ url_for('get_assets') }}">Cancel</a>
+    </fieldset>
+</form>

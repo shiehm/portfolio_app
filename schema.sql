@@ -22,3 +22,28 @@ CREATE TABLE holdings (
     account_id integer NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     shares integer NOT NULL DEFAULT 0
 );
+
+CREATE SCHEMA IF NOT EXISTS views;
+
+CREATE VIEW views.base_holdings AS (
+    SELECT
+        accounts.account_name,
+        accounts.account_type,
+        assets.ticker,
+        assets.name,
+        assets.category,
+        assets.current_price,
+        holdings.shares,
+        (assets.current_price * holdings.shares) AS market_value,
+        CASE 
+            WHEN SUM(assets.current_price * holdings.shares) OVER () > 0 
+            THEN (assets.current_price * holdings.shares) / SUM(assets.current_price * holdings.shares) OVER ()
+            ELSE 0
+        END AS percent,
+        assets.id AS asset_id,
+        accounts.id AS account_id,
+        holdings.id AS holding_id
+    FROM accounts
+    LEFT JOIN holdings ON accounts.id = holdings.account_id
+    LEFT JOIN assets ON assets.id = holdings.asset_id
+);

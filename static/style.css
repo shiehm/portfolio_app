@@ -43,7 +43,8 @@
 }
 
 .currency,
-.number {
+.number,
+.percent {
   text-align: right;
 }
 

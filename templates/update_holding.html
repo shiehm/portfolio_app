@@ -1,29 +1,30 @@
 <form action="{{ url_for('update_holding') }}" method="post">
-<dl>
-    <dt>Account Institution: {{ holding.account_name }} </dt>
-    <dt>Account Type: {{ holding.account_type }}</dt>
-    <dt>Asset Ticker: {{ holding.ticker }}</dt>
-    <dt>Asset Name: {{ holding.name }}</dt>
-    <p></p>
+    <dl>
+        <dt>Account Institution: {{ holding.account_name }} </dt>
+        <dt>Account Type: {{ holding.account_type }}</dt>
+        <dt>Asset Ticker: {{ holding.ticker }}</dt>
+        <dt>Asset Name: {{ holding.name }}</dt>
+        <p></p>
 
-    <input type="hidden" name="holding_id" value="{{ holding['holding_id'] }}">
-    <dt>
-        <label for="shares">Enter the number of shares:</label>
-    </dt>
-    <dd>
-        <input id="shares" type="number" name="shares" placeholder="{{ holding['shares'] }}">
-    </dd>
+        <input type="hidden" name="holding_id" value="{{ holding['holding_id'] }}">
+        <dt>
+            <label for="shares">Enter the number of shares:</label>
+        </dt>
+        <dd>
+            <input id="shares" type="number" name="shares" placeholder="{{ holding['shares'] }}">
+        </dd>
 
-    <input type="hidden" name="asset_id" value="{{ holding['asset_id'] }}">
-    <dt>
-        <label for="current_price">Enter the current price:</label>
-    </dt>
-    <dd>
-        <input id="current_price" type="currency" name="current_price" placeholder="{{ holding['current_price'] }}">
-    </dd>
-</dl> 
-<fieldset>
-    <input type="submit" value="Save">
-    <a href="{{ url_for('get_holdings') }}">Cancel</a>
-</fieldset>
+        <input type="hidden" name="asset_id" value="{{ holding['asset_id'] }}">
+        <dt>
+            <label for="current_price">Enter the current price:</label>
+        </dt>
+        <dd>
+            <input id="current_price" type="currency" name="current_price" placeholder="{{ holding['current_price'] }}">
+        </dd>
+    </dl> 
+
+    <fieldset>
+        <input type="submit" value="Save">
+        <a href="{{ url_for('get_holdings') }}">Cancel</a>
+    </fieldset>
 </form>
