@@ -29,7 +29,8 @@
                         {% endif %} 
                     {% endfor %}
                     <td>
-                        <form class="btn-row" method="post" action="{{ url_for('delete_account') }}">
+                        <form class="btn-row" method="post" action="{{ url_for('delete_account') }}" 
+                            onsubmit="return confirm('Are you sure? Deleting the account will delete all associated holdings.');">
                             <input type="hidden" name="account_id" value="{{ dic['account_id'] }}">
                             <button type="submit" class="delete">Delete</button>
                         </form>

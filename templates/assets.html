@@ -33,7 +33,8 @@
                         </form>
                     </td>
                     <td>
-                        <form class="btn-row" method="post" action="{{ url_for('delete_asset') }}">
+                        <form class="btn-row" method="post" action="{{ url_for('delete_asset') }}"
+                        onsubmit="return confirm('Are you sure? Deleting the asset will delete all associated holdings.');">
                             <input type="hidden" name="asset_id" value="{{ dic['id'] }}">
                             <button type="submit" class="delete">Delete</button>
                         </form>

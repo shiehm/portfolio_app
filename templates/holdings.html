@@ -67,17 +67,20 @@
                 </td>
                 <td>
                     {% if dic['holding_id'] %}
-                        <form class="btn-row" method="post" action="{{ url_for('delete_holding') }}">
+                        <form class="btn-row" method="post" action="{{ url_for('delete_holding') }}"
+                        onsubmit="return confirm('Are you sure you want to delete this holding?');">
                             <input type="hidden" name="holding_id" value="{{ dic['holding_id'] }}">
                             <button type="submit" class="delete">Delete</button>
                         </form>
                     {% elif dic['asset_id'] %}
-                        <form class="btn-row" method="post" action="{{ url_for('delete_asset') }}">
+                        <form class="btn-row" method="post" action="{{ url_for('delete_asset') }}"
+                        onsubmit="return confirm('Are you sure you want to delete this asset?');">
                             <input type="hidden" name="asset_id" value="{{ dic['asset_id'] }}">
                             <button type="submit" class="delete">Delete</button>
                         </form>
                     {% elif dic['account_id'] %}
-                        <form class="btn-row" method="post" action="{{ url_for('delete_account') }}">
+                        <form class="btn-row" method="post" action="{{ url_for('delete_account') }}"
+                        onsubmit="return confirm('Are you sure you want to delete this account?');">
                             <input type="hidden" name="account_id" value="{{ dic['account_id'] }}">
                             <button type="submit" class="delete">Delete</button>
                         </form>
