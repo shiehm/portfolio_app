@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import logging
 import psycopg2
 from psycopg2.extras import DictCursor
+from werkzeug.security import generate_password_hash, check_password_hash
 
 LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
@@ -28,6 +29,19 @@ class DatabasePersistence:
             with connection.cursor() as cursor:
                 cursor.execute('''
                     SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = 'accounts';
+                ''')
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute('''
+                        CREATE TABLE accounts (
+                            id serial PRIMARY KEY,
+                            account_name text NOT NULL,
+                            account_type text NOT NULL
+                        );
+                    ''')
+
+                cursor.execute('''
+                    SELECT COUNT(*) FROM information_schema.tables
                     WHERE table_schema = 'public' and table_name = 'assets'
                 ''')
                 if cursor.fetchone()[0] == 0:
@@ -38,19 +52,6 @@ class DatabasePersistence:
                             "name" text NOT NULL,
                             category text NOT NULL,
                             current_price NUMERIC(10, 2) NOT NULL
-                        );
-                    ''')
-                
-                cursor.execute('''
-                    SELECT COUNT(*) FROM information_schema.tables
-                    WHERE table_schema = 'public' AND table_name = 'accounts';
-                ''')
-                if cursor.fetchone()[0] == 0:
-                    cursor.execute('''
-                        CREATE TABLE accounts (
-                            id serial PRIMARY KEY,
-                            account_name text NOT NULL,
-                            account_type text NOT NULL
                         );
                     ''')
                 
@@ -67,7 +68,66 @@ class DatabasePersistence:
                             shares integer NOT NULL DEFAULT 0
                         );
                     ''')
-    
+                
+                cursor.execute('''
+                    SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = 'views' AND table_name = 'base_holdings';
+                ''')
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute('CREATE SCHEMA IF NOT EXISTS views;')
+                    cursor.execute('''
+                        CREATE VIEW views.base_holdings AS (
+                            SELECT
+                                accounts.account_name,
+                                accounts.account_type,
+                                assets.ticker,
+                                assets.name,
+                                assets.category,
+                                assets.current_price,
+                                holdings.shares,
+                                (assets.current_price * holdings.shares) AS market_value,
+                                CASE 
+                                    WHEN SUM(assets.current_price * holdings.shares) OVER () > 0 
+                                    THEN (assets.current_price * holdings.shares) / SUM(assets.current_price * holdings.shares) OVER ()
+                                    ELSE 0
+                                END AS percent,
+                                assets.id AS asset_id,
+                                accounts.id AS account_id,
+                                holdings.id AS holding_id
+                            FROM accounts
+                            LEFT JOIN holdings ON accounts.id = holdings.account_id
+                            LEFT JOIN assets ON assets.id = holdings.asset_id
+                        );
+                    ''')
+                
+                cursor.execute('''
+                    SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = 'views' AND table_name = 'base_holdings';
+                ''')
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute('CREATE SCHEMA IF NOT EXISTS users;')
+                    cursor.execute('''
+                        CREATE TABLE users (
+                            id serial PRIMARY KEY,
+                            username text UNIQUE NOT NULL,
+                            password_hash text NOT NULL
+                        );
+                    ''')
+                
+                cursor.execute('''
+                    SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = 'users' AND table_name = 'users';
+                ''')
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute('CREATE SCHEMA IF NOT EXISTS users;')
+                    cursor.execute('''
+                        CREATE TABLE users (
+                            id serial PRIMARY KEY,
+                            username text UNIQUE NOT NULL,
+                            password_hash text NOT NULL
+                        );
+                    ''')
+
     @contextmanager
     def _database_connect(self):
         if os.environ.get('FLASK_ENV') == 'production':
@@ -80,6 +140,38 @@ class DatabasePersistence:
                 yield connection
         finally:
             connection.close()
+
+    def create_user(self, username, password):
+        password_hash = generate_password_hash(password)
+        query = 'INSERT INTO users.users (username, password_hash) VALUES (%s, %s)'
+        logger.info('''Executing query: %s 
+            with username: %s and password_hash: %s'''
+            , query, username, password_hash)
+        
+        with self._database_connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, (username, password_hash))
+
+    def all_users(self):
+        query = 'SELECT username FROM users.users'
+        logger.info('Executing query: %s', query)
+        with self._database_connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+                results = cursor.fetchall()
+
+        return [user for (user,) in results]
+    
+    def load_user_credentials(self):
+        query = 'SELECT username, password_hash FROM users.users'
+        logger.info('Executing query: %s', query)
+        with self._database_connect() as connection:
+            with connection.cursor(cursor_factory=DictCursor) as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+        
+        credentials = {row['username']: row['password_hash'] for row in rows}
+        return credentials
 
     def get_columns(self):
         filter_clause = 'LIMIT 0'

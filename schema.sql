@@ -23,8 +23,8 @@ CREATE TABLE holdings (
     shares integer NOT NULL DEFAULT 0
 );
 
+DROP TABLE IF EXISTS base_holdings;
 CREATE SCHEMA IF NOT EXISTS views;
-
 CREATE VIEW views.base_holdings AS (
     SELECT
         accounts.account_name,
@@ -46,4 +46,12 @@ CREATE VIEW views.base_holdings AS (
     FROM accounts
     LEFT JOIN holdings ON accounts.id = holdings.account_id
     LEFT JOIN assets ON assets.id = holdings.asset_id
+);
+
+DROP TABLE IF EXISTS users;
+CREATE SCHEMA IF NOT EXISTS users;
+CREATE TABLE users.users (
+    id serial PRIMARY KEY,
+    username text UNIQUE NOT NULL,
+    password_hash text NOT NULL
 );

@@ -18,16 +18,24 @@
       {% endif %}
     {% endwith %}
   </header>
-    {% block content %}
-    {% endblock %}
-    
+  {% block content %}{% endblock %}
+  
   <hr>
-    {% block links %}
-    {% endblock %}
+  {% block links %}{% endblock %}
 
+  {% if 'username' in session %}
   <hr>
+  
+  <div>
     <a class="btn-view" href="{{ url_for('get_accounts') }}">See Accounts</a>
     <a class="btn-view" href="{{ url_for('get_assets') }}">See Assets</a>
     <a class="btn-view" href="{{ url_for('get_holdings') }}">See Holdings</a>
+  </div>
 
+  <div>
+    <form method="post" action="{{ url_for('signout') }}">
+      <button type="submit">Sign Out</button>
+    </form>
+  </div>
+  {% endif %}
   </body>

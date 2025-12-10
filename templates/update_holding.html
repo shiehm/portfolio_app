@@ -1,3 +1,6 @@
+{% extends 'layout.html' %}
+
+{% block content %}
 <form action="{{ url_for('update_holding') }}" method="post">
     <dl>
         <dt>Account Institution: {{ holding.account_name }} </dt>
@@ -40,3 +43,4 @@
         <a href="{{ url_for('get_holdings') }}">Cancel</a>
     </fieldset>
 </form>
+{% endblock %}

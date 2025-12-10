@@ -1,0 +1,23 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<form method="post" action="{{ url_for('signin') }}">
+    <div>
+        <label for="username">Username:</label>
+        <input name="username" id="username" value="{{ request.form.username | default('') }}"/>
+    </div>
+    
+    <div>
+        <label for="password">Password:</label>
+        <input name="password" id="password" value="{{ request.form.password | default('') }}"/>
+    </div>
+
+    <button type="submit">Sign In</button>
+</form>
+{% endblock %}
+
+{% block links %}
+<div>
+    <a class="btn-view" href="{{ url_for('create_user') }}">Create New User</a>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<form method="post" action="{{ url_for('create_user') }}">
+    <div>
+        <label for="username">Username:</label>
+        <input name="username" id="username" value="{{ request.form.username | default('') }}"/>
+        <p id="username-hint">Username must be at least 2 characters long and only contain letters and numbers.</p>
+    </div>
+    
+    <div>
+        <label for="password">Password:</label>
+        <input name="password" id="password" value="{{ request.form.password | default('') }}"/>
+        <p id="password-hint">Password must be at least 8 characters long and include a number.</p>
+    </div>
+
+    <button type="submit">Create User</button>
+</form>
+{% endblock %}
+
+{% block links %}
+<div>
+    <a class="btn-view" href="{{ url_for('signin') }}">Return to Sign In</a>
+</div>
+{% endblock %}
