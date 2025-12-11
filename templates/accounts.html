@@ -9,7 +9,7 @@
     <table class="holdings">
         <thead>
             <tr>
-                {% for column in lists[0].keys() if column != 'account_id' %}
+                {% for column in columns if column != 'account_id' %}
                     <th>{{ column | replace('_', ' ') | title }}</th>
                 {% endfor %}
             </tr>

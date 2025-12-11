@@ -17,12 +17,12 @@
     <table class="holdings">
         <thead>
             <tr>
-                {% for column in columns if column not in ('asset_id', 'account_id', 'holding_id') %}
+                {% for column in columns if 'id' not in column %}
                     <th>{{ column | replace('_', ' ') | title }}</th>
                 {% endfor %}
             </tr>
             <tr>
-                {% for column in columns if column not in ('asset_id', 'account_id', 'holding_id') %}                    
+                {% for column in columns if 'id' not in column %}
                     {% if column == 'account_name' %}
                         <th>
                             <form method="get" action="{{ url_for('get_holdings') }}">
@@ -103,7 +103,6 @@
 {% endblock %}
 
 {% block links %}
-<hr>
 <div class="actions">
   <a class="btn-add" href="{{ url_for('add_account') }}">Add Account</a>
   <a class="btn-add" href="{{ url_for('add_asset') }}">Add Asset</a>

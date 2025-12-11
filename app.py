@@ -13,8 +13,8 @@ import json
 import os
 from portfolio.database_persistence import DatabasePersistence
 import secrets
-from werkzeug.exceptions import NotFound
-from werkzeug.security import generate_password_hash, check_password_hash
+# from werkzeug.exceptions import NotFound # Haven't used this - add it perhaps?
+from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -32,14 +32,19 @@ def verify_password(password):
     has_num = any(str(number) in password for number in numbers)
     return length and has_num
 
-def require_login():
-    if not 'username' in session:
-        flash('You must be signed in to do that.', 'error')
-        return redirect(url_for('signin'))
+def require_login(func):
+    @wraps(func)
+    def decorated_func(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('You must be signed in to do that.', 'error')
+            return redirect(url_for('signin'))
+        return func(*args, **kwargs)
+    return decorated_func
 
 @app.before_request
 def load_data():
-    g.storage = DatabasePersistence()
+    g.user_id = session.get('user_id')
+    g.storage = DatabasePersistence(g.user_id)
 
 @app.route('/create_user', methods=['GET', 'POST'])
 def create_user():
@@ -49,36 +54,37 @@ def create_user():
         
         if not verify_username(username):
             flash('Invalid username.', 'error')
-            return render_template('create_user')
+            return render_template('create_user.html')
         elif not verify_password(password):
             flash('Invalid password.', 'error')
-            return render_template('create_user')
+            return render_template('create_user.html')
 
         g.storage.create_user(username, password)
-        flash('New user successfully created.', 'successs')
+        flash('New user successfully created.', 'success')
         return redirect(url_for('signin'))
     
     else:
-        return render_template('create_user')
+        return render_template('create_user.html')
 
 @app.route('/signin', methods=['GET', 'POST'])
 def signin():
-    if 'username' in session:
+    if 'user_id' in session:
         return redirect(url_for('index'))
 
     elif request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
 
-        credentials = g.storage.load_user_credentials()
+        credentials, user_ids = g.storage.load_user_credentials()
         if username in credentials:
             if check_password_hash(credentials[username], password):   
                 session['username'] = username
+                session['user_id'] = user_ids[username]
                 flash(f"Welcome {session['username']}.", 'success')
                 return redirect(url_for('index'))
             else:
                 flash('Invalid password.')
-                return redirect(url_for('index'))
+                return render_template('signin.html'), 422
         else:
             flash('Invalid username.')
             return render_template('signin.html'), 422
@@ -89,24 +95,29 @@ def signin():
 @app.route("/signout", methods=['POST'])
 def signout():
     session.pop('username', None)
+    session.pop('user_id', None)
     flash('You have been signed out.', 'success')
     return redirect(url_for('signin'))
 
 @app.route('/')
+@require_login
 def index():
     return render_template('layout.html')
 
 @app.route('/accounts')
+@require_login
 def get_accounts():
-    lists = g.storage.account_totals()
-    return render_template('accounts.html', lists=lists)
+    lists, columns = g.storage.account_totals()
+    return render_template('accounts.html', lists=lists, columns=columns)
 
 @app.route('/assets')
+@require_login
 def get_assets():
-    lists = g.storage.asset_totals()
-    return render_template('assets.html', lists=lists)
+    lists, columns = g.storage.asset_totals()
+    return render_template('assets.html', lists=lists, columns=columns)
 
 @app.route('/holdings')
+@require_login
 def get_holdings():
     columns = g.storage.get_columns()
     accounts = g.storage.all_accounts()
@@ -124,10 +135,12 @@ def get_holdings():
                             lists=lists)
 
 @app.route('/accounts/new')
+@require_login
 def add_account():
     return render_template('new_account.html')
 
 @app.route('/accounts', methods=['POST'])
+@require_login
 def create_account():
     account_name = request.form['account_name'].strip()
     account_type = request.form['account_type']
@@ -137,39 +150,43 @@ def create_account():
     return redirect(url_for('get_accounts'))
 
 @app.route('/assets/new')
+@require_login
 def add_asset():
     accounts = g.storage.all_accounts()
     return render_template('new_asset.html', accounts = accounts)
 
 @app.route('/assets', methods=['POST'])
+@require_login
 def create_asset():
-    print("FORM DATA:", request.form.to_dict(flat=False))
     asset_ticker = request.form['asset_ticker']
     asset_name = request.form['asset_name'].strip()
     asset_category = request.form['asset_category']
-    current_price = request.form.get('current_price', 0)
+    current_price = request.form.get('current_price', type=float)
 
     g.storage.add_asset(asset_ticker, asset_name, asset_category, current_price)
     flash('The asset has been added.', 'success')
     return redirect(url_for('get_assets'))
 
 @app.route('/holdings/new')
+@require_login
 def add_holding():
     accounts = g.storage.all_accounts()
     assets = g.storage.all_assets()
     return render_template('new_holding.html', accounts=accounts, assets=assets)
 
 @app.route('/holdings', methods=['POST'])
+@require_login
 def create_holding():
     account_id = json.loads(request.form['account_id'])
     asset_id = json.loads(request.form['asset_id'])
-    shares = request.form['shares']
+    shares = request.form.get('shares', type=int)
     
     g.storage.add_holding(account_id, asset_id, shares)
     flash('The holding has been added.', 'success')
     return redirect(url_for('get_holdings'))
 
 @app.route("/assets/update", methods=["GET", "POST"])
+@require_login
 def update_asset():
     if request.method == "POST":
         asset_id = request.form.get('asset_id', type=int)
@@ -184,6 +201,7 @@ def update_asset():
         return render_template('update_asset.html', asset=asset)
 
 @app.route("/holdings/update", methods=["GET", "POST"])
+@require_login
 def update_holding():
     if request.method == "POST":
         holding_id = request.form.get('holding_id', type=int)
@@ -203,22 +221,25 @@ def update_holding():
         return render_template('update_holding.html', holding=holding)
 
 @app.route("/accounts/delete", methods=["POST"])
+@require_login
 def delete_account():
-    account_id = request.form.get('account_id', 0)
+    account_id = request.form.get('account_id', type=int)
     g.storage.delete_account(account_id)
     flash('The account has been deleted.', 'success')
     return redirect(url_for('get_accounts'))
 
 @app.route("/assets/delete", methods=["POST"])
+@require_login
 def delete_asset():
-    asset_id = request.form.get('asset_id', 0)
+    asset_id = request.form.get('asset_id', type=int)
     g.storage.delete_asset(asset_id)
     flash('The asset has been deleted.', 'success')
     return redirect(url_for('get_assets'))
 
 @app.route("/holdings/delete", methods=["POST"])
+@require_login
 def delete_holding():
-    holding_id = request.form.get('holding_id', 0)
+    holding_id = request.form.get('holding_id', type=int)
     g.storage.delete_holding(holding_id)
     flash('The holding has been deleted.', 'success')
     return redirect(url_for('get_holdings'))

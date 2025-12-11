@@ -7,7 +7,6 @@
         <input name="username" id="username" value="{{ request.form.username | default('') }}"/>
         <p id="username-hint">Username must be at least 2 characters long and only contain letters and numbers.</p>
     </div>
-    
     <div>
         <label for="password">Password:</label>
         <input name="password" id="password" value="{{ request.form.password | default('') }}"/>

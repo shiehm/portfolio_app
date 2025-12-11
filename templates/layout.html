@@ -31,10 +31,10 @@
     <a class="btn-view" href="{{ url_for('get_assets') }}">See Assets</a>
     <a class="btn-view" href="{{ url_for('get_holdings') }}">See Holdings</a>
   </div>
-
+  <hr>
   <div>
     <form method="post" action="{{ url_for('signout') }}">
-      <button type="submit">Sign Out</button>
+      <button class="btn-user" type="submit">Sign Out</button>
     </form>
   </div>
   {% endif %}

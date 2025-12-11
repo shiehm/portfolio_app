@@ -9,7 +9,7 @@
     <table class="holdings">
         <thead>
             <tr>
-                {% for column in lists[0].keys() if 'id' not in column %}
+                {% for column in columns if 'id' not in column %}
                     <th>{{ column | replace('_', ' ') | title }}</th>
                 {% endfor %}
             </tr>

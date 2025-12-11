@@ -11,22 +11,35 @@ logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 class DatabasePersistence:
-    def __init__(self):
-        self._setup_schema()
-        self._BASE_HOLDINGS_QUERY = 'SELECT * FROM views.base_holdings '
-    
-    def _base_holdings_query(self, filter=None):
-        # Only shows accounts with holdings 
-        if filter == 'has_holdings':
-            filter_clause = 'WHERE shares IS NOT NULL '
-            return self._BASE_HOLDINGS_QUERY + filter_clause
+    _initialized = False
 
-        # Shows all accounts regardless of holdings
-        return self._BASE_HOLDINGS_QUERY
+    def __init__(self, user_id):
+        if not DatabasePersistence._initialized:
+            self._setup_schema()
+            DatabasePersistence._initialized = True
+        self.user_id = user_id
+        self._BASE_HOLDINGS_QUERY = '''
+            SELECT * FROM views.base_holdings 
+            WHERE user_id = %s 
+        '''
     
     def _setup_schema(self):
-        with self._database_connect() as connection:
+        with self._database_connect(require_user=False) as connection:
             with connection.cursor() as cursor:
+                cursor.execute('''
+                    SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = 'users' AND table_name = 'users';
+                ''')
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute('CREATE SCHEMA IF NOT EXISTS users;')
+                    cursor.execute('''
+                        CREATE TABLE users.users (
+                            id serial PRIMARY KEY,
+                            username text UNIQUE NOT NULL,
+                            password_hash text NOT NULL
+                        );
+                    ''')
+                
                 cursor.execute('''
                     SELECT COUNT(*) FROM information_schema.tables
                     WHERE table_schema = 'public' AND table_name = 'accounts';
@@ -36,7 +49,8 @@ class DatabasePersistence:
                         CREATE TABLE accounts (
                             id serial PRIMARY KEY,
                             account_name text NOT NULL,
-                            account_type text NOT NULL
+                            account_type text NOT NULL,
+                            user_id integer NOT NULL REFERENCES users.users(id) ON DELETE CASCADE
                         );
                     ''')
 
@@ -51,7 +65,8 @@ class DatabasePersistence:
                             ticker text NOT NULL,
                             "name" text NOT NULL,
                             category text NOT NULL,
-                            current_price NUMERIC(10, 2) NOT NULL
+                            current_price NUMERIC(10, 2) NOT NULL,
+                            user_id integer NOT NULL REFERENCES users.users(id) ON DELETE CASCADE
                         );
                     ''')
                 
@@ -65,7 +80,8 @@ class DatabasePersistence:
                             id serial PRIMARY KEY,
                             asset_id integer NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
                             account_id integer NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-                            shares integer NOT NULL DEFAULT 0
+                            shares integer NOT NULL DEFAULT 0,
+                            user_id integer NOT NULL REFERENCES users.users(id) ON DELETE CASCADE
                         );
                     ''')
                 
@@ -81,7 +97,7 @@ class DatabasePersistence:
                                 accounts.account_name,
                                 accounts.account_type,
                                 assets.ticker,
-                                assets.name,
+                                assets."name",
                                 assets.category,
                                 assets.current_price,
                                 holdings.shares,
@@ -93,43 +109,16 @@ class DatabasePersistence:
                                 END AS percent,
                                 assets.id AS asset_id,
                                 accounts.id AS account_id,
-                                holdings.id AS holding_id
+                                holdings.id AS holding_id,
+                                accounts.user_id AS user_id
                             FROM accounts
                             LEFT JOIN holdings ON accounts.id = holdings.account_id
                             LEFT JOIN assets ON assets.id = holdings.asset_id
                         );
                     ''')
-                
-                cursor.execute('''
-                    SELECT COUNT(*) FROM information_schema.tables
-                    WHERE table_schema = 'views' AND table_name = 'base_holdings';
-                ''')
-                if cursor.fetchone()[0] == 0:
-                    cursor.execute('CREATE SCHEMA IF NOT EXISTS users;')
-                    cursor.execute('''
-                        CREATE TABLE users (
-                            id serial PRIMARY KEY,
-                            username text UNIQUE NOT NULL,
-                            password_hash text NOT NULL
-                        );
-                    ''')
-                
-                cursor.execute('''
-                    SELECT COUNT(*) FROM information_schema.tables
-                    WHERE table_schema = 'users' AND table_name = 'users';
-                ''')
-                if cursor.fetchone()[0] == 0:
-                    cursor.execute('CREATE SCHEMA IF NOT EXISTS users;')
-                    cursor.execute('''
-                        CREATE TABLE users (
-                            id serial PRIMARY KEY,
-                            username text UNIQUE NOT NULL,
-                            password_hash text NOT NULL
-                        );
-                    ''')
 
     @contextmanager
-    def _database_connect(self):
+    def _database_connect(self, require_user=True):
         if os.environ.get('FLASK_ENV') == 'production':
             connection = psycopg2.connect(os.environ['DATABASE_URL'])
         else:
@@ -137,9 +126,24 @@ class DatabasePersistence:
         
         try:
             with connection:
+                if require_user:
+                    if self.user_id is None:
+                        raise RuntimeError('user_id required for database access.')
+                    with connection.cursor() as cursor:
+                        set_user = 'SET LOCAL app.current_user_id = %s'
+                        cursor.execute(set_user, (self.user_id,))
                 yield connection
         finally:
             connection.close()
+    
+    def _base_holdings_query(self, filter=None):
+        # Only shows accounts with holdings 
+        if filter == 'has_holdings':
+            filter_clause = 'AND shares IS NOT NULL '
+            return self._BASE_HOLDINGS_QUERY + filter_clause
+
+        # Shows all accounts regardless of holdings
+        return self._BASE_HOLDINGS_QUERY
 
     def create_user(self, username, password):
         password_hash = generate_password_hash(password)
@@ -148,14 +152,14 @@ class DatabasePersistence:
             with username: %s and password_hash: %s'''
             , query, username, password_hash)
         
-        with self._database_connect() as connection:
+        with self._database_connect(require_user=False) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(query, (username, password_hash))
 
     def all_users(self):
         query = 'SELECT username FROM users.users'
         logger.info('Executing query: %s', query)
-        with self._database_connect() as connection:
+        with self._database_connect(require_user=False) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(query)
                 results = cursor.fetchall()
@@ -163,23 +167,24 @@ class DatabasePersistence:
         return [user for (user,) in results]
     
     def load_user_credentials(self):
-        query = 'SELECT username, password_hash FROM users.users'
+        query = 'SELECT * FROM users.users'
         logger.info('Executing query: %s', query)
-        with self._database_connect() as connection:
+        with self._database_connect(require_user=False) as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute(query)
                 rows = cursor.fetchall()
         
         credentials = {row['username']: row['password_hash'] for row in rows}
-        return credentials
+        user_ids = {row['username']: row['id'] for row in rows}
+        return credentials, user_ids
 
     def get_columns(self):
         filter_clause = 'LIMIT 0'
         query = self._base_holdings_query() + filter_clause
-        logger.info('Executing query: %s', query)
-        with self._database_connect() as connection:
+        logger.info('Executing query: %s with user_id: %s', query, self.user_id)
+        with self._database_connect(require_user=False) as connection:
             with connection.cursor() as cursor:
-                cursor.execute(query)
+                cursor.execute(query, (self.user_id,))
                 if cursor.description is None:
                     return []     
                 # cursor.description is a list of tuples (name, type_code, ...)
@@ -189,32 +194,32 @@ class DatabasePersistence:
 
     def all_holdings(self):
         query = self._base_holdings_query('has_holdings')
-        logger.info('Executing query: %s', query)
+        logger.info('Executing query: %s with user_id = %s', query, self.user_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(query)
+                cursor.execute(query, (self.user_id,))
                 results = cursor.fetchall()
                 
         holdings = [dict(lst) for lst in results]
         return holdings
 
     def all_accounts(self):
-        query = 'SELECT * FROM accounts'
-        logger.info('Executing query: %s', query)
+        query = 'SELECT * FROM accounts WHERE user_id = %s'
+        logger.info('Executing query: %s with user_id = %s', query, self.user_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(query)
+                cursor.execute(query, (self.user_id,))
                 results = cursor.fetchall()
 
         accounts = [dict(lst) for lst in results]
         return accounts
 
     def all_assets(self):
-        query = 'SELECT * FROM assets'
-        logger.info('Executing query: %s', query)
+        query = 'SELECT * FROM assets WHERE user_id = %s'
+        logger.info('Executing query: %s with user_id = %s', query, self.user_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(query)
+                cursor.execute(query, (self.user_id,))
                 results = cursor.fetchall()
             
         assets = [dict(lst) for lst in results]
@@ -223,10 +228,10 @@ class DatabasePersistence:
     def find_holding(self, holding_id):
         filter_clause = 'AND holding_id = %s'
         query = self._base_holdings_query('has_holdings') + filter_clause
-        logger.info('Executing query: %s with holding_id: %s', query, holding_id)
+        logger.info('Executing query: %s with user_id: %s, holding_id: %s', query, self.user_id, holding_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(query, (holding_id,))
+                cursor.execute(query, (self.user_id, holding_id,))
                 result = cursor.fetchone()
 
         return result
@@ -243,53 +248,55 @@ class DatabasePersistence:
 
     def add_account(self, account_name, account_type):
         query = '''
-            INSERT INTO accounts (account_name, account_type) 
-            VALUES (%s, %s)
-        '''
-        logger.info('''Executing query: %s 
-            with account_name: %s and account_type: %s
-            ''', query, account_name, account_type
-            )
-
-        with self._database_connect() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(query, (account_name, account_type))
-        
-    def add_asset(self, ticker, name, category, current_price):
-        query = '''
-            INSERT INTO assets (ticker, name, category, current_price) 
-            VALUES (%s, %s, %s, %s)
-        '''
-        logger.info('''Executing query: %s 
-            with ticker: %s, name: %s, category: %s, current_price: %s
-            ''', ticker, name, category, current_price
-            )
-        
-        with self._database_connect() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(query, (ticker, name, category, current_price))
-    
-    def add_holding(self, account_id, asset_id, shares):
-        query = '''
-            INSERT INTO holdings (account_id, asset_id, shares) 
+            INSERT INTO accounts (account_name, account_type, user_id) 
             VALUES (%s, %s, %s)
         '''
         logger.info('''Executing query: %s 
-            with account_id: %s, asset_id: %s, shares: %s
-            ''', account_id, asset_id, shares
+            with account_name: %s, account_type: %s, user_id: %s
+            ''', query, account_name, account_type, self.user_id
+            )
+
+        with self._database_connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, (account_name, account_type, self.user_id))
+        
+    def add_asset(self, ticker, name, category, current_price):
+        query = '''
+            INSERT INTO assets (ticker, name, category, current_price, user_id) 
+            VALUES (%s, %s, %s, %s, %s)
+        '''
+        logger.info('''Executing query: %s with ticker: %s, 
+            name: %s, category: %s, current_price: %s, user_id: %s
+            ''', ticker, name, category, current_price, self.user_id
             )
         
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute(query, (account_id, asset_id, shares))
+                cursor.execute(query, (
+                    ticker, name, category, current_price, self.user_id)
+                    )
+    
+    def add_holding(self, account_id, asset_id, shares):
+        query = '''
+            INSERT INTO holdings (account_id, asset_id, shares, user_id) 
+            VALUES (%s, %s, %s, %s)
+        '''
+        logger.info('''Executing query: %s 
+            with account_id: %s, asset_id: %s, shares: %s, user_id: %s
+            ''', account_id, asset_id, shares, self.user_id
+            )
+        
+        with self._database_connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, (account_id, asset_id, shares, self.user_id))
 
     def account_holdings(self, account_id):
-        filter_clause = 'WHERE account_id = %s'
+        filter_clause = 'AND account_id = %s'
         query = self._base_holdings_query() + filter_clause
-        logger.info('Executing query: %s with account_id: %s', query, account_id)
+        logger.info('Executing query: %s with user_id: %s, account_id: %s', query, self.user_id, account_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(query, (account_id,))
+                cursor.execute(query, (self.user_id, account_id,))
                 results = cursor.fetchall()
         
         account_holdings = [dict(lst) for lst in results]
@@ -342,16 +349,21 @@ class DatabasePersistence:
                 SUM(market_value) AS total_market_value,
                 SUM(percent) AS percent
             FROM base_query
-            GROUP BY account_name, account_type, account_id
+            GROUP BY account_name, account_type, account_id 
         '''
-        logger.info('Executing query: %s', query)
+        logger.info('Executing query: %s with user_id: %s', query, self.user_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(query)
+                cursor.execute(query, (self.user_id,))
                 results = cursor.fetchall()
+                
+                cursor.execute(query + 'LIMIT 0', (self.user_id,))
+                if cursor.description is None:
+                    return []     
+                column_names = [column[0] for column in cursor.description]
         
         accounts = [dict(lst) for lst in results]
-        return accounts
+        return accounts, column_names
 
     def asset_totals(self):
         query = f'''
@@ -369,13 +381,19 @@ class DatabasePersistence:
                 SUM(percent) AS percent
             FROM assets
             LEFT JOIN base_query ON assets.id = base_query.asset_id
+            WHERE assets.user_id = base_query.user_id
             GROUP BY assets.id, assets.ticker, assets.name, assets.category
         '''
-        logger.info('Executing query: %s', query)
+        logger.info('Executing query: %s with user_id: %s', query, self.user_id)
         with self._database_connect() as connection:
             with connection.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(query)
+                cursor.execute(query, (self.user_id,))
                 results = cursor.fetchall()
+
+                cursor.execute(query + 'LIMIT 0', (self.user_id,))
+                if cursor.description is None:
+                    return []     
+                column_names = [column[0] for column in cursor.description]
         
         assets = [dict(lst) for lst in results]
-        return assets
+        return assets, column_names
