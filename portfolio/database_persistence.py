@@ -121,6 +121,8 @@ class DatabasePersistence:
     def _database_connect(self, require_user=True):
         if os.environ.get('FLASK_ENV') == 'production':
             connection = psycopg2.connect(os.environ['DATABASE_URL'])
+        elif os.environ.get('FLASK_ENV') == "test":
+            connection = psycopg2.connect(dbname="test_portfolio")
         else:
             connection = psycopg2.connect(dbname="portfolio")
         

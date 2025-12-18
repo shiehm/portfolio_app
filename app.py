@@ -15,36 +15,39 @@ from portfolio.database_persistence import DatabasePersistence
 import secrets
 # from werkzeug.exceptions import NotFound # Haven't used this - add it perhaps?
 from werkzeug.security import check_password_hash
+from portfolio.utils import (
+    verify_username,
+    verify_password
+)
 
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = secrets.token_hex(32)
 
-def verify_username(username):
-    length = len(username) > 1
-    is_alphanum = username.isalnum()
-    unique = username not in g.storage.all_users()
-    return length and is_alphanum and unique
+LOGIN_EXEMPT = ['signin', 'create_user', 'static']
 
-def verify_password(password):
-    numbers = list(range(10))
-    length = len(password) >= 8
-    has_num = any(str(number) in password for number in numbers)
-    return length and has_num
-
-def require_login(func):
-    @wraps(func)
-    def decorated_func(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('You must be signed in to do that.', 'error')
-            return redirect(url_for('signin'))
-        return func(*args, **kwargs)
-    return decorated_func
+# def require_login(func):
+#     @wraps(func)
+#     def decorated_func(*args, **kwargs):
+#         if 'user_id' not in session:
+#             flash('You must be signed in to do that.', 'error')
+#             return redirect(url_for('signin'))
+#         return func(*args, **kwargs)
+#     return decorated_func
 
 @app.before_request
 def load_data():
     g.user_id = session.get('user_id')
     g.storage = DatabasePersistence(g.user_id)
+
+@app.before_request
+def require_login_global():
+    if request.endpoint in LOGIN_EXEMPT:
+        return
+    if 'user_id' not in session:
+        if request.referrer:
+            flash('You must be signed in to do that.', 'error')
+        return redirect(url_for('signin'))
 
 @app.route('/create_user', methods=['GET', 'POST'])
 def create_user():
@@ -100,24 +103,24 @@ def signout():
     return redirect(url_for('signin'))
 
 @app.route('/')
-@require_login
+# @require_login
 def index():
     return render_template('layout.html')
 
 @app.route('/accounts')
-@require_login
+# @require_login
 def get_accounts():
     lists, columns = g.storage.account_totals()
     return render_template('accounts.html', lists=lists, columns=columns)
 
 @app.route('/assets')
-@require_login
+# @require_login
 def get_assets():
     lists, columns = g.storage.asset_totals()
     return render_template('assets.html', lists=lists, columns=columns)
 
 @app.route('/holdings')
-@require_login
+# @require_login
 def get_holdings():
     columns = g.storage.get_columns()
     accounts = g.storage.all_accounts()
@@ -135,12 +138,12 @@ def get_holdings():
                             lists=lists)
 
 @app.route('/accounts/new')
-@require_login
+# @require_login
 def add_account():
     return render_template('new_account.html')
 
 @app.route('/accounts', methods=['POST'])
-@require_login
+# @require_login
 def create_account():
     account_name = request.form['account_name'].strip()
     account_type = request.form['account_type']
@@ -150,13 +153,13 @@ def create_account():
     return redirect(url_for('get_accounts'))
 
 @app.route('/assets/new')
-@require_login
+# @require_login
 def add_asset():
     accounts = g.storage.all_accounts()
     return render_template('new_asset.html', accounts = accounts)
 
 @app.route('/assets', methods=['POST'])
-@require_login
+# @require_login
 def create_asset():
     asset_ticker = request.form['asset_ticker']
     asset_name = request.form['asset_name'].strip()
@@ -168,14 +171,14 @@ def create_asset():
     return redirect(url_for('get_assets'))
 
 @app.route('/holdings/new')
-@require_login
+# @require_login
 def add_holding():
     accounts = g.storage.all_accounts()
     assets = g.storage.all_assets()
     return render_template('new_holding.html', accounts=accounts, assets=assets)
 
 @app.route('/holdings', methods=['POST'])
-@require_login
+# @require_login
 def create_holding():
     account_id = json.loads(request.form['account_id'])
     asset_id = json.loads(request.form['asset_id'])
@@ -186,7 +189,7 @@ def create_holding():
     return redirect(url_for('get_holdings'))
 
 @app.route("/assets/update", methods=["GET", "POST"])
-@require_login
+# @require_login
 def update_asset():
     if request.method == "POST":
         asset_id = request.form.get('asset_id', type=int)
@@ -201,7 +204,7 @@ def update_asset():
         return render_template('update_asset.html', asset=asset)
 
 @app.route("/holdings/update", methods=["GET", "POST"])
-@require_login
+# @require_login
 def update_holding():
     if request.method == "POST":
         holding_id = request.form.get('holding_id', type=int)
@@ -221,7 +224,7 @@ def update_holding():
         return render_template('update_holding.html', holding=holding)
 
 @app.route("/accounts/delete", methods=["POST"])
-@require_login
+# @require_login
 def delete_account():
     account_id = request.form.get('account_id', type=int)
     g.storage.delete_account(account_id)
@@ -229,7 +232,7 @@ def delete_account():
     return redirect(url_for('get_accounts'))
 
 @app.route("/assets/delete", methods=["POST"])
-@require_login
+# @require_login
 def delete_asset():
     asset_id = request.form.get('asset_id', type=int)
     g.storage.delete_asset(asset_id)
@@ -237,7 +240,7 @@ def delete_asset():
     return redirect(url_for('get_assets'))
 
 @app.route("/holdings/delete", methods=["POST"])
-@require_login
+# @require_login
 def delete_holding():
     holding_id = request.form.get('holding_id', type=int)
     g.storage.delete_holding(holding_id)
