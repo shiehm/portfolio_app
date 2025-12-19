@@ -122,14 +122,13 @@ def get_assets():
 @app.route('/holdings')
 # @require_login
 def get_holdings():
-    columns = g.storage.get_columns()
     accounts = g.storage.all_accounts()
     account_id = request.args.get('account_id', type=int)
     
     if account_id is None:
-        lists = g.storage.all_holdings()
+        lists, columns = g.storage.all_holdings()
     else:
-        lists = g.storage.account_holdings(account_id)
+        lists, columns = g.storage.account_holdings(account_id)
     
     return render_template('holdings.html',
                             columns=columns, 
