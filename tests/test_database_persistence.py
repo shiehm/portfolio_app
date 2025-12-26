@@ -2,7 +2,7 @@ import os
 from portfolio.database_persistence import DatabasePersistence
 import psycopg2
 import unittest
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 
 os.environ["FLASK_ENV"] = "test"
 
@@ -29,17 +29,15 @@ class DatabasePersistenceTest(unittest.TestCase):
         self.user_id = self._create_test_user()
         self.db = DatabasePersistence(self.user_id)
 
-    def tearDown(self):
-        self._reset_all_tables()
+    # def tearDown(self):
+    #     self._reset_all_tables()
 
-    def _create_test_user(self, username="test_user", password="test_password"):
+    def _create_test_user(self):
         db = DatabasePersistence(user_id=None)
-        db.create_user(username, password)
-        print("_create_test_user: user created")
-
+        db.create_user(username="test_user", password="test_password")
         with self._connection as connection:
             with connection.cursor() as cursor:
-                cursor.execute('SELECT id FROM users.users WHERE username = %s', (username,))
+                cursor.execute('SELECT id FROM users.users WHERE username = %s', ("test_user",))
                 (user_id, ) = cursor.fetchone()
         return user_id
     
@@ -153,7 +151,7 @@ class DatabasePersistenceTest(unittest.TestCase):
         self.assertEqual([], test_holding)
 
     # Testing account specific view
-    def test_add_holding(self):
+    def test_account_holdings(self):
         self.db.add_account("test_account", "test_type")
         self.db.add_asset("TEST", "test_name", "test_category", 10)
         self.db.add_holding(account_id=1, asset_id=1, shares=100)

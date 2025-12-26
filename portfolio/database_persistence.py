@@ -259,7 +259,7 @@ class DatabasePersistence:
         '''
         logger.info('''Executing query: %s with ticker: %s, 
             name: %s, category: %s, current_price: %s, user_id: %s
-            ''', ticker, name, category, current_price, self.user_id
+            ''', query, ticker, name, category, current_price, self.user_id
             )
         
         with self._database_connect() as connection:
@@ -335,7 +335,7 @@ class DatabasePersistence:
     
     def delete_account(self, account_id):
         query = 'DELETE FROM accounts WHERE id = %s'
-        logger.info('Executing query: %s with id = %s')
+        logger.info('Executing query: %s with id = %s', query, account_id)
         with self._database_connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(query, (account_id,))

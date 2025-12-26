@@ -13,7 +13,6 @@ import json
 import os
 from portfolio.database_persistence import DatabasePersistence
 import secrets
-# from werkzeug.exceptions import NotFound # Haven't used this - add it perhaps?
 from werkzeug.security import check_password_hash
 from portfolio.utils import (
     verify_username,
@@ -55,7 +54,7 @@ def create_user():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        if not verify_username(username):
+        if not verify_username(username, g.storage.all_users()):
             flash('Invalid username.', 'error')
             return render_template('create_user.html')
         elif not verify_password(password):

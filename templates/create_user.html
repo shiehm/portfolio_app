@@ -9,7 +9,7 @@
     </div>
     <div>
         <label for="password">Password:</label>
-        <input name="password" id="password" value="{{ request.form.password | default('') }}"/>
+        <input type="password" name="password" id="password"/>
         <p id="password-hint">Password must be at least 8 characters long and include a number.</p>
     </div>
 
